@@ -619,7 +619,7 @@ var directives = []string{
 	"limits",
 	"timeouts",
 	"tls",
-
+	"iota", 	// github.com/mholt/caddy/iota
 	// services/utilities, or other directives that don't necessarily inject handlers
 	"startup",  // TODO: Deprecate this directive
 	"shutdown", // TODO: Deprecate this directive

@@ -1,4 +1,4 @@
-package interceptor
+package iota
 
 import (
 	"bytes"
@@ -14,6 +14,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"strconv"
@@ -37,12 +38,12 @@ func init() {
 	})
 	logfile, err := os.OpenFile("iota.log", os.O_APPEND|os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
-		fmt.Println("unable to open/create middleware log file")
+		fmt.Println("unable to open/create iota interceptor log file")
 		panic(err)
 	}
 	// we don't buffer writes to the log file because the write frequency is very log
 	multiWriter := io.MultiWriter(os.Stdout, logfile)
-	logger = log.New(multiWriter, "middleware", log.Ldate|log.Ltime)
+	logger = log.New(multiWriter, "[iota interceptor] ", log.Ldate|log.Ltime)
 }
 
 const (
@@ -81,7 +82,6 @@ func setup(c *caddy.Controller) error {
 		if i != 2 {
 			return c.ArgErr()
 		}
-
 	}
 	logger.Printf("iota API call interception configured with max bundle txs limit of %d and max MWM of %d\n", maxTxInBundle, maxMWM)
 	logger.Printf("using PoW implementation: %s\n", name)
@@ -170,32 +170,32 @@ func (interc Interceptor) ServeHTTP(w http.ResponseWriter, r *http.Request) (int
 	}
 	start := time.Now().UnixNano()
 
-	var isValueTransaction bool
+	var isValueBundle bool
 	var inputValue int64
 	transactions := make([]transaction.Transaction, len(txTrytes))
 	txsCount := len(transactions)
-	logger.Printf("transactions:\n")
 	for i := len(txTrytes) - 1; i >= 0; i-- {
 		tx, err := transaction.AsTransactionObject(txTrytes[i])
 		if err != nil {
 			return http.StatusBadRequest, ErrBuildingTx
 		}
-		if tx.Value > 0 {
-			isValueTransaction = true
-		}
-		if tx.Value < 0 {
-			inputValue += tx.Value
-		}
 		if tx.Value != 0 {
-			logger.Printf("%s - %.2f\n", tx.Address, units.ConvertUnits(float64(tx.Value), units.I, units.Mi))
+			isValueBundle = true
+			val := units.ConvertUnits(math.Abs(float64(tx.Value)), units.I, units.Mi)
+			if tx.Value < 0 {
+				inputValue += tx.Value
+				logger.Printf("%s - [input] %.6f Mi\n", tx.Address, -val)
+			} else {
+				logger.Printf("%s - [output] %.6f Mi\n", tx.Address, -val)
+			}
 		}
-		transactions = append(transactions, *tx)
+		transactions[i] = *tx
 	}
 
 	logger.Printf("bundle: %s\n", transactions[0].Bundle)
 
-	if isValueTransaction {
-		logger.Printf("bundle is using %.2f IOTAs as input\n", units.ConvertUnits(float64(inputValue), units.I, units.Mi))
+	if isValueBundle {
+		logger.Printf("bundle is using %.6f Mi as input\n", units.ConvertUnits(float64(inputValue), units.I, units.Mi))
 	}
 
 	logger.Printf("doing PoW for bundle with %d txs...\n", txsCount)

@@ -20,3 +20,7 @@ og_static/
 .vscode/
 
 *.bat
+
+caddy/caddy
+caddy/iota.log
+caddy/requests.log
