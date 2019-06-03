@@ -4,7 +4,7 @@ This version of Caddy has an IOTA interceptor middleware which intercepts calls 
 the JSON command and then executing `attachToTangle` within the middleware, instead of delegating it to IRI.
 Other IRI API commands are delegated to the specified IRI node.
 
-A `Caddyfile` to use with this Caddy version can look like:
+Sample `Caddyfile` to use in conjunction with this modified Caddy version:
 ```
 127.0.0.1:15265 {
 
@@ -23,13 +23,13 @@ A `Caddyfile` to use with this Caddy version can look like:
         # limit request body to 10 megabytes
         limits 10mb
 
+        # intercept attachToTangle calls with a max MWM of 14 and 20 txs per call
+        iota 14 20
+
         proxy / http://127.0.0.1:14265 {
                 header_upstream X-IOTA-API-VERSION 1.4
                 header_upstream Access-Control-Allow-Origin *
         }
-
-        # intercept attachToTangle calls with a max MWM of 14 and 20 txs per call
-        iota 14 20
 }
 ```
 
