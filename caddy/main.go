@@ -24,5 +24,6 @@ import "github.com/mholt/caddy/caddy/caddymain"
 var run = caddymain.Run // replaced for tests
 
 func main() {
+	caddymain.EnableTelemetry = false
 	run()
 }
